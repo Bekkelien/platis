@@ -1,2 +1,6 @@
-art:
-  background: ./art/background/
+background:
+  path: ./art/background/
+  type: pink.png
+
+character: 
+  path: ./art/characters/pink_man/ # TODO

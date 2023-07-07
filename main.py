@@ -10,23 +10,38 @@ from src.screen import ScreenResolution
 
 config = Config().get_config()
 
-pygame.init()
-pygame.display.set_caption("Platis")
-
 # Move to config file for testing now
 FPS = 60
 GRAVITY = 1
 PLAYER_VELOCITY = 5
-PLAYER_COLOR = (255, 0, 0)
-BACKGROUND_COLOR = (255, 255, 255)
+#PLAYER_COLOR = (255, 0, 0)
+#BACKGROUND_COLOR = (255, 255, 255)
 
-
+# Move out of main
+pygame.init()
+pygame.display.set_caption("Platis")
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
+ 
+
+# TESTING SPRITES TODO ::
+def get_image(image):
+    sprites = []
+    sprite_sheet_image = pygame.image.load(Path(config['character']['path']) / Path(image)).convert_alpha()
+    height = sprite_sheet_image.get_height()
+    width = sprite_sheet_image.get_width() 
+    images = int(width/height)
+
+    for i in range(images):
+        image_segment = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha()
+        image_segment.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
+        sprites.append(image_segment)
+    
+    print(sprites)
+    return sprites
 
 class Background: # TODO fix implementation of background hardcoded
     def __init__(self):
-        background = "pink.png"
-        self.image = pygame.image.load(Path(config['art']['background'])  / Path(background))
+        self.image = pygame.image.load(Path(config['background']['path'])  / Path(config['background']['type']))
         _, _, self.width, self.height = self.image.get_rect()
 
     def fill(self):
@@ -40,7 +55,6 @@ class Background: # TODO fix implementation of background hardcoded
         for tile in self.tiles:
             gui.blit(self.image, tile)
         #pygame.display.update()
-    
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
@@ -49,8 +63,10 @@ class Player(pygame.sprite.Sprite):
         self.velocity_y = 0
         self.fall_counter = 0
         #self.mask = None
+        # HAX FOR NOW::
+        self.image = get_image("run.png")[3] #TODO: Fix this only loading one image
     
-    def move(self, dx, dy): 
+    def move(self, dx, dy):
         self.rect.x += dx
         self.rect.y += dy
 
@@ -66,13 +82,13 @@ class Player(pygame.sprite.Sprite):
         # missing gravity reset
 
     def loop(self):
-        self.gravity() # Adding gravity to the player
+        #self.gravity() # Adding gravity to the player
         self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
     
     def draw(self, gui):
-        print(self.rect)
-        pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
-        #pygame.display.update()
+        gui.blit(self.image, self.rect)
+        #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
+        ##pygame.display.update()
 
 # TODO: I dont like to have functions when everything is classes  
 def move_player(player):
