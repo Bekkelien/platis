@@ -1,6 +1,13 @@
+game_settings:
+  fps: 60
+
 background:
   path: ./art/background/
   type: pink.png
 
 character: 
+  gravity: 1
+  velocity: 5
+  animation_delay: 3
   path: ./art/characters/pink_man/ # TODO
+  

@@ -11,9 +11,6 @@ from src.screen import ScreenResolution
 config = Config().get_config()
 
 # Move to config file for testing now
-FPS = 60
-GRAVITY = 1
-PLAYER_VELOCITY = 5
 #PLAYER_COLOR = (255, 0, 0)
 #BACKGROUND_COLOR = (255, 255, 255)
 
@@ -22,9 +19,6 @@ pygame.init()
 pygame.display.set_caption("Platis")
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
  
-
-# TESTING SPRITES TODO ::
-
 class PlayerSprite():
     def __init__(self):
         self.all_sprites: dict = {}
@@ -80,6 +74,10 @@ class Player(pygame.sprite.Sprite):
         self.velocity_x = 0
         self.velocity_y = 0
         self.fall_counter = 0
+        self.jump_counter = 0
+        self.hit = False
+        self.animation_counter = 0
+        self.hit_counter = 0
         self.direction = "left"
         self.sprites = PlayerSprite().load_sheets()
     
@@ -100,17 +98,35 @@ class Player(pygame.sprite.Sprite):
             self.animation_count = 0
 
     def gravity(self):
-        self.velocity_y += min(1, (self.fall_counter / FPS) * GRAVITY) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
+        self.velocity_y += min(1, (self.fall_counter / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
         self.fall_counter += 1
         # missing gravity reset
 
     def loop(self):
         #self.gravity() # Adding gravity to the player
         self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
+        self.update_sprite()
     
+    def update_sprite(self):
+        sprite_state = "idle" # Idle sprite state every time we update
+        if not self.velocity_x:
+            sprite_state = "run"
+
+        sprite_state = sprite_state + "_" + self.direction
+        sprite_current = self.sprites[sprite_state]
+        sprite_index = (self.animation_counter // config['character']['animation_delay']) % len(sprite_current)
+        self.current_sprite = sprite_current[sprite_index]
+
+        animation_counter_limit = len(sprite_current*config['character']['animation_delay'])
+        if self.animation_counter < animation_counter_limit:
+            self.animation_counter += 1
+        else:
+            self.animation_counter = 0 # Reset animation counter
+
+        #print(self.animation_counter)
+        
     def draw(self, gui):
-        current_sprite = self.sprites['idle_' + self.direction][0]
-        gui.blit(current_sprite, self.rect)
+        gui.blit(self.current_sprite, self.rect)
         #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
         ##pygame.display.update()
 
@@ -122,9 +138,9 @@ def move_player(player):
     player.velocity_x = 0 # Reset velocity when not pressing a button
 
     if keys[pygame.K_LEFT]:
-        player.move_left(PLAYER_VELOCITY)
+        player.move_left(config['character']['velocity'])
     if keys[pygame.K_RIGHT]:
-        player.move_right(PLAYER_VELOCITY)
+        player.move_right(config['character']['velocity'])
 
     player.draw(gui) # Cache the players new position
 
@@ -142,7 +158,7 @@ def main(gui):
 
     alive = True
     while alive:
-        clock.tick(FPS)
+        clock.tick(config['game_settings']['fps'])
 
         for event in pygame.event.get():
             # Exit if the player dies
