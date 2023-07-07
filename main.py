@@ -19,20 +19,19 @@ pygame.init()
 pygame.display.set_caption("Platis")
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
  
-class PlayerSprite():
-    def __init__(self):
+class AssetSprite():
+    def __init__(self, asset_path: str, asset_folder: str, direction: bool = False):
+        self.direction: bool = direction
         self.all_sprites: dict = {}
-        self.image_paths: list = list(Path(config['character']['path']).glob("*.png"))
-        #self.character_images = pygame.image.load(Path(config['character']['path']))
+        self.image_paths: list = list(Path(asset_path + asset_folder).glob("*.png"))
 
-    def _flip(self, sprites): # TODO: type check, is sprite a pygame surface??
+    def _flip(self, sprites): # TODO: type hint, is sprite a pygame surface??
         return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
     def _get_image(self, image_path: Path) -> dict:
         
         sprite_sheet_image = pygame.image.load(image_path).convert_alpha()
         
-        # Compute the image metadata
         height = sprite_sheet_image.get_height()
         width = sprite_sheet_image.get_width() 
         image_blocks = int(width/height)
@@ -41,11 +40,17 @@ class PlayerSprite():
         for i in range(image_blocks):
             surface = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha() # TODO: #32
             surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
+            # TODO :: 2x character size?
             sprites.append(surface)
 
         # Add sprites to the dictionary
-        self.all_sprites[str(image_path.stem) + "_right"] = sprites
-        self.all_sprites[str(image_path.stem) + "_left"] = self._flip(sprites)
+        if self.direction:
+            self.all_sprites[str(image_path.stem) + "_right"] = sprites
+            self.all_sprites[str(image_path.stem) + "_left"] = self._flip(sprites)
+
+        else:
+            self.all_sprites[str(image_path.stem)] = sprites
+
 
     def load_sheets(self) -> dict: 
         """Loads the sprites sheets into a dictionary of sprites and returns the dictionary"""
@@ -70,6 +75,7 @@ class Background:
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
+        super().__init__()
         self.rect = pygame.Rect(x, y, width, height)
         self.velocity_x = 0
         self.velocity_y = 0
@@ -79,7 +85,7 @@ class Player(pygame.sprite.Sprite):
         self.animation_counter = 0
         self.hit_counter = 0
         self.direction = "left"
-        self.sprites = PlayerSprite().load_sheets()
+        self.sprites = AssetSprite(config['character']['path'], config['character']['folder'], direction=True).load_sheets()
     
     def move(self, dx, dy):
         self.rect.x += dx
@@ -106,6 +112,7 @@ class Player(pygame.sprite.Sprite):
         #self.gravity() # Adding gravity to the player
         self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
         self.update_sprite()
+        self.update() # remove the background box from the character
     
     def update_sprite(self):
         sprite_state = "idle" # Idle sprite state every time we update
@@ -125,6 +132,10 @@ class Player(pygame.sprite.Sprite):
 
         #print(self.animation_counter)
         
+    def update(self):
+        self.rect = self.current_sprite.get_rect(topleft=(self.rect.x, self.rect.y))
+        self.mask = pygame.mask.from_surface(self.current_sprite)
+
     def draw(self, gui):
         gui.blit(self.current_sprite, self.rect)
         #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)

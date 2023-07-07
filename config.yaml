@@ -3,11 +3,12 @@ game_settings:
 
 background:
   path: ./art/background/
+  folder: terrain/
   type: pink.png
 
 character: 
   gravity: 1
   velocity: 5
   animation_delay: 3
-  path: ./art/characters/pink_man/ # TODO
-  
+  path: ./art/characters/ # TODO
+  folder: pink_man/
