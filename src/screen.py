@@ -7,8 +7,8 @@ FACTOR = 2
 @dataclass
 class ScreenResolution:
     screen = screeninfo.get_monitors()[0]
-    width = screen.width / 2
-    height = screen.height / 2
+    width: int = int(screen.width / FACTOR)
+    height: int = int(screen.height / FACTOR)
 
 
 
