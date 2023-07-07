@@ -24,22 +24,42 @@ gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
  
 
 # TESTING SPRITES TODO ::
-def get_image(image):
-    sprites = []
-    sprite_sheet_image = pygame.image.load(Path(config['character']['path']) / Path(image)).convert_alpha()
-    height = sprite_sheet_image.get_height()
-    width = sprite_sheet_image.get_width() 
-    images = int(width/height)
 
-    for i in range(images):
-        image_segment = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha()
-        image_segment.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
-        sprites.append(image_segment)
-    
-    print(sprites)
-    return sprites
+class PlayerSprite():
+    def __init__(self):
+        self.all_sprites: dict = {}
+        self.image_paths: list = list(Path(config['character']['path']).glob("*.png"))
+        #self.character_images = pygame.image.load(Path(config['character']['path']))
 
-class Background: # TODO fix implementation of background hardcoded
+    def _flip(self, sprites): # TODO: type check, is sprite a pygame surface??
+        return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
+
+    def _get_image(self, image_path: Path) -> dict:
+        
+        sprite_sheet_image = pygame.image.load(image_path).convert_alpha()
+        
+        # Compute the image metadata
+        height = sprite_sheet_image.get_height()
+        width = sprite_sheet_image.get_width() 
+        image_blocks = int(width/height)
+
+        sprites = []
+        for i in range(image_blocks):
+            surface = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha() # TODO: #32
+            surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
+            sprites.append(surface)
+
+        # Add sprites to the dictionary
+        self.all_sprites[str(image_path.stem) + "_right"] = sprites
+        self.all_sprites[str(image_path.stem) + "_left"] = self._flip(sprites)
+
+    def load_sheets(self) -> dict: 
+        """Loads the sprites sheets into a dictionary of sprites and returns the dictionary"""
+        for image_path in self.image_paths:
+            self._get_image(image_path)
+        return self.all_sprites
+
+class Background:
     def __init__(self):
         self.image = pygame.image.load(Path(config['background']['path'])  / Path(config['background']['type']))
         _, _, self.width, self.height = self.image.get_rect()
@@ -50,11 +70,9 @@ class Background: # TODO fix implementation of background hardcoded
         y = [i for i in range(0, ScreenResolution.height, self.height)]
         self.tiles = list(itertools.product(x, y))
 
-
     def draw(self, gui):
         for tile in self.tiles:
             gui.blit(self.image, tile)
-        #pygame.display.update()
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
@@ -62,9 +80,8 @@ class Player(pygame.sprite.Sprite):
         self.velocity_x = 0
         self.velocity_y = 0
         self.fall_counter = 0
-        #self.mask = None
-        # HAX FOR NOW::
-        self.image = get_image("run.png")[3] #TODO: Fix this only loading one image
+        self.direction = "left"
+        self.sprites = PlayerSprite().load_sheets()
     
     def move(self, dx, dy):
         self.rect.x += dx
@@ -72,9 +89,15 @@ class Player(pygame.sprite.Sprite):
 
     def move_left(self, velocity):
         self.velocity_x = -velocity
+        if self.direction != "left": # If direction is not left and the player is moving left change direction
+            self.direction = "left"
+            self.animation_count = 0
 
     def move_right(self, velocity):
         self.velocity_x = velocity
+        if self.direction!= "right": # If direction is not right and the player is moving right change direction
+            self.direction = "right"
+            self.animation_count = 0
 
     def gravity(self):
         self.velocity_y += min(1, (self.fall_counter / FPS) * GRAVITY) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
@@ -86,7 +109,8 @@ class Player(pygame.sprite.Sprite):
         self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
     
     def draw(self, gui):
-        gui.blit(self.image, self.rect)
+        current_sprite = self.sprites['idle_' + self.direction][0]
+        gui.blit(current_sprite, self.rect)
         #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
         ##pygame.display.update()
 
