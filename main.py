@@ -36,7 +36,7 @@ class AssetSprite():
             surface = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha() # TODO: #32
             surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
             if 'character' in str(image_path): # TODO :: Make generic if folder name is changed
-                for i in range(1,config['character']['scale']):
+                for _ in range(1,config['character']['scale']):
                     surface = pygame.transform.scale2x(surface)
             sprites.append(surface)
 
@@ -48,8 +48,6 @@ class AssetSprite():
 
         else:
             self.all_sprites[str(image_path.stem)] = sprites
-
-
 
 
 
@@ -88,12 +86,18 @@ class Object(pygame.sprite.Sprite):
         gui.blit(self.image, (self.rect.x, self.rect.y))
 
 
+# This should be in block class or something like that
 def load_block(size): # TODO: Map all terrain blocks, add name to loading a block
     path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
     image = pygame.image.load(path).convert_alpha()
     surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
     rect = pygame.Rect(96, 128, size, size)
     surface.blit(image, (0,0) ,rect)
+
+    # Scaling
+    for _ in range(1, config['background']['scale']):
+        surface = pygame.transform.scale2x(surface)
+
     return surface
 
 class Block(Object):
@@ -218,12 +222,12 @@ class Collision():
 
 
 class Asset():
-    def __init__(self, block_size=48):
+    def __init__(self, block_size=48*config['background']['scale']):
         self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
-        self.objects =  [Block(64, ScreenResolution.height - block_size*2, block_size),
-                         Block(128, ScreenResolution.height - block_size*4, block_size),
-                         Block(128*2, ScreenResolution.height - block_size*8, block_size),
-                         Block(128*4, ScreenResolution.height - block_size*10, block_size)]
+        self.objects =  [Block(128, ScreenResolution.height - block_size*2, block_size),
+                         Block(128*2, ScreenResolution.height - block_size*4, block_size),
+                         Block(128*4, ScreenResolution.height - block_size*6, block_size)
+                         ]
         
         self.assets = self.floors + self.objects
 

@@ -3,9 +3,10 @@ game_settings:
   fps: 60
 
 graphics:
-  screen_reduction: 2
+  screen_reduction: 1.5
 
 background:
+  scale: 2 # int
   path: ./art/background/
   folder: terrain/
   type: pink.png
