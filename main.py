@@ -1,7 +1,5 @@
-import itertools
-from typing import Any
-
 import pygame
+import itertools
 
 from pathlib import Path
 
@@ -11,13 +9,9 @@ from src.screen import ScreenResolution
 
 config = Config().get_config()
 
-# Move to config file for testing now
-#PLAYER_COLOR = (255, 0, 0)
-#BACKGROUND_COLOR = (255, 255, 255)
-
 # Move out of main
 pygame.init()
-pygame.display.set_caption("Platis")
+pygame.display.set_caption(config['game_settings']['name'])
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
  
 class AssetSprite():
@@ -163,7 +157,15 @@ class Player(pygame.sprite.Sprite):
     
     def update_sprite(self):
         sprite_state = "idle" # Idle sprite state every time we update
-        if not self.velocity_x:
+        if self.velocity_y < 0: # We are jumping
+            if self.jump_count == 1:
+                sprite_state = "jump"
+            elif self.jump_count == 2:
+                sprite_state = "double_jump"
+        elif self.velocity_y > config['character']['gravity']: # NOTE: HAX We are falling if we are moving faster then gravity
+            sprite_state = "fall"
+
+        elif self.velocity_x > 0: # elif as we are not running when jumping
             sprite_state = "run"
 
         sprite_state = sprite_state + "_" + self.direction
@@ -186,9 +188,6 @@ class Player(pygame.sprite.Sprite):
 
     def draw(self, gui):
         gui.blit(self.current_sprite, self.rect)
-        #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
-        ##pygame.display.update()
-
 
 class Collision():
     def __init__(self) -> None:
@@ -208,7 +207,9 @@ class Collision():
 
             collision.append(object) # All objects that are colliding with the player
 
-        return collision # TODO
+        return collision # TODO :: Not used ATM
+    
+
 
 class Asset():
     def __init__(self, block_size=48):
@@ -223,25 +224,23 @@ class Movement():
     def __init__(self) -> None:
         self.keys = None
     
-    def _get_keys(self):
-        self.keys = pygame.key.get_pressed()
-    
-    def _player(self, player):
-        
+    def move(self, player):
+        keys = pygame.key.get_pressed()
         player.loop() # Move the player every frame
         player.velocity_x = 0 # Reset velocity when not pressing a button
 
-        if self.keys[pygame.K_LEFT]:
+        if keys[pygame.K_LEFT]:
             player.move_left(config['character']['velocity'])
-        if self.keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT]:
             player.move_right(config['character']['velocity'])
-        if self.keys[pygame.K_SPACE] and player.jump_count < config['character']['jump_limit']:
-            player.jump()
-        
-    def move(self, player):
-        self._get_keys()
-        self._player(player)
 
+    def jump(self, player, event):
+        if event.key == pygame.K_SPACE and player.jump_count < config['character']['jump_limit']:
+            player.jump()
+
+class Scroll(): # TODO:
+    def __init__(self) -> None:
+        pass
 
 def main(gui):
     #print(ScreenResolution.width)
@@ -265,21 +264,23 @@ def main(gui):
 
         for event in pygame.event.get():
             # Exit if the player dies
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT: 
                 alive = False
                 break
+            
+            # Check for key presses
+            if event.type == pygame.KEYDOWN:
+                movement.jump(player, event) 
+
+            # TODO add for "key down"
 
         # Check for movement before doing anything else
         movement.move(player) 
-
-        ## NOTE:: draw in every function creates order of operations to be important
-        # Gaming 
-        background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
-        asset.draw(gui)
-
-        # Check collisions
         collision.vertical(player, objects)
         
+        ## NOTE:: draw in every function creates order of operations to be important
+        background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
+        asset.draw(gui)
         player.draw(gui)
 
         # Update screen
