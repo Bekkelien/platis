@@ -1,14 +1,17 @@
 import screeninfo
 from dataclasses import dataclass
 
-# NOTE: Temp to reduce size of the window
-FACTOR = 2
+
+from src.config import Config
+
+
+config = Config().get_config()
 
 @dataclass
 class ScreenResolution:
     screen = screeninfo.get_monitors()[0]
-    width: int = int(screen.width / FACTOR)
-    height: int = int(screen.height / FACTOR)
+    width: int = int(screen.width / config['graphics']['screen_reduction'])
+    height: int = int(screen.height / config['graphics']['screen_reduction'])
 
 
 

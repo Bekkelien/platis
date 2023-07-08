@@ -73,6 +73,37 @@ class Background:
         for tile in self.tiles:
             gui.blit(self.image, tile)
 
+
+class Asset(pygame.sprite.Sprite):
+    """Base class for all assets"""
+    def __init__(self, x, y, width, height, name=None):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, width, height)
+        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+        self.width = width
+        self.height = height
+        self.name = name
+
+    def draw(self, gui):
+        gui.blit(self.image, (self.rect.x, self.rect.y))
+
+
+def load_block(size): # TODO: Map all terrain blocks, add name to loading a block
+    path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
+    image = pygame.image.load(path).convert_alpha()
+    surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
+    rect = pygame.Rect(96, 128, size, size)
+    surface.blit(image, (0,0) ,rect)
+    return surface
+
+class Block(Asset):
+    def __init__(self, x, y, size):
+        super().__init__(x, y, size, size)
+        block = load_block(size)
+        self.image.blit(block, (0, 0))
+        self.mask = pygame.mask.from_surface(self.image)
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
@@ -133,6 +164,7 @@ class Player(pygame.sprite.Sprite):
         #print(self.animation_counter)
         
     def update(self):
+        """ Mask the character to get rid of the background box """
         self.rect = self.current_sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.current_sprite)
 
@@ -156,6 +188,15 @@ def move_player(player):
     player.draw(gui) # Cache the players new position
 
 
+class Floor():
+    def __init__(self, block_size=48):
+        self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
+
+    def draw(self, gui):
+        for floor in self.floors:
+            floor.draw(gui)
+        
+
 def main(gui):
     print(ScreenResolution.width)
     clock = pygame.time.Clock()
@@ -163,7 +204,8 @@ def main(gui):
     # Invoke
     background = Background()
     player = Player(50,50,50,50)
-
+    floor = Floor()
+    
     # Preloading
     background.fill()
 
@@ -179,6 +221,7 @@ def main(gui):
         
         # Gaming 
         background.draw(gui)
+        floor.draw(gui)
         move_player(player)
         
         # Update screen
