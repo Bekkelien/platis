@@ -24,7 +24,7 @@ class AssetSprite():
         return [pygame.transform.flip(sprite, True, False) for sprite in sprites]
 
     def _get_image(self, image_path: Path) -> dict:
-        
+        print("Loading asset sprite:", image_path)
         sprite_sheet_image = pygame.image.load(image_path).convert_alpha()
         
         height = sprite_sheet_image.get_height()
@@ -35,9 +35,12 @@ class AssetSprite():
         for i in range(image_blocks):
             surface = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha() # TODO: #32
             surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
-            # TODO :: 2x character size?
+            if 'character' in str(image_path): # TODO :: Make generic if folder name is changed
+                for i in range(1,config['character']['scale']):
+                    surface = pygame.transform.scale2x(surface)
             sprites.append(surface)
 
+    
         # Add sprites to the dictionary
         if self.direction:
             self.all_sprites[str(image_path.stem) + "_right"] = sprites
@@ -45,6 +48,9 @@ class AssetSprite():
 
         else:
             self.all_sprites[str(image_path.stem)] = sprites
+
+
+
 
 
     def load_sheets(self) -> dict: 

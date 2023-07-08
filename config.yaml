@@ -12,6 +12,7 @@ background:
   terrain: terrain.png
 
 character: 
+  scale: 2 # int
   gravity: 1
   velocity: 5
   jump_limit: 2
