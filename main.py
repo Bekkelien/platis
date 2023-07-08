@@ -144,7 +144,7 @@ class Player(pygame.sprite.Sprite):
         self.fall_count = 0
         self.velocity_y = 0
         self.jump_count = 0
-
+                
     def hit_head(self):
         self.count = 0
         self.velocity_y *= -1
@@ -214,10 +214,17 @@ class Collision():
 class Asset():
     def __init__(self, block_size=48):
         self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
+        self.objects =  [Block(64, ScreenResolution.height - block_size*2, block_size),
+                         Block(128, ScreenResolution.height - block_size*4, block_size),
+                         Block(128*2, ScreenResolution.height - block_size*8, block_size),
+                         Block(128*4, ScreenResolution.height - block_size*10, block_size)]
+        
+        self.assets = self.floors + self.objects
 
     def draw(self, gui):
-        for floor in self.floors:
-            floor.draw(gui)
+        for asset in self.assets:
+            asset.draw(gui)
+        
         
 class Movement():
     # player changes so needs to be passed as a parameter every time
@@ -253,7 +260,8 @@ def main(gui):
     asset = Asset()
     collision = Collision()
 
-    objects = asset.floors
+    # All assets 
+    objects = asset.assets
 
     # Preloading
     background.fill()
