@@ -13,6 +13,8 @@ background:
 character: 
   gravity: 1
   velocity: 5
+  jump_limit: 2
+  jump_velocity: 10
   animation_delay: 3
   path: ./art/characters/ # TODO
   folder: pink_man/

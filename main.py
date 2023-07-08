@@ -1,4 +1,5 @@
 import itertools
+from typing import Any
 
 import pygame
 
@@ -138,6 +139,13 @@ class Player(pygame.sprite.Sprite):
         self.fall_count += 1
         # missing gravity reset
 
+    def jump(self):
+        self.velocity_y = - (config['character']['gravity'] * config['character']['jump_velocity'])
+        self.animation_count = 0
+        self.jump_count += 1
+        if self.jump_count == 1:
+            self.fall_count = 0
+
     def landed(self):
         self.fall_count = 0
         self.velocity_y = 0
@@ -210,28 +218,39 @@ class Asset():
         for floor in self.floors:
             floor.draw(gui)
         
-# TODO: I dont like to have functions when everything is classes  
-def move_player(player):
-    keys = pygame.key.get_pressed()
+class Movement():
+    # player changes so needs to be passed as a parameter every time
+    def __init__(self) -> None:
+        self.keys = None
     
-    player.loop() # Move the player every frame
-    player.velocity_x = 0 # Reset velocity when not pressing a button
+    def _get_keys(self):
+        self.keys = pygame.key.get_pressed()
+    
+    def _player(self, player):
+        
+        player.loop() # Move the player every frame
+        player.velocity_x = 0 # Reset velocity when not pressing a button
 
-    if keys[pygame.K_LEFT]:
-        player.move_left(config['character']['velocity'])
-    if keys[pygame.K_RIGHT]:
-        player.move_right(config['character']['velocity'])
-
-    player.draw(gui) # Cache the players new position
+        if self.keys[pygame.K_LEFT]:
+            player.move_left(config['character']['velocity'])
+        if self.keys[pygame.K_RIGHT]:
+            player.move_right(config['character']['velocity'])
+        if self.keys[pygame.K_SPACE] and player.jump_count < config['character']['jump_limit']:
+            player.jump()
+        
+    def move(self, player):
+        self._get_keys()
+        self._player(player)
 
 
 def main(gui):
-    print(ScreenResolution.width)
+    #print(ScreenResolution.width)
     clock = pygame.time.Clock()
 
     # Invoke
     background = Background()
     player = Player(50,50,50,50)
+    movement = Movement()
     asset = Asset()
     collision = Collision()
 
@@ -249,15 +268,20 @@ def main(gui):
             if event.type == pygame.QUIT:
                 alive = False
                 break
-        
+
+        # Check for movement before doing anything else
+        movement.move(player) 
+
+        ## NOTE:: draw in every function creates order of operations to be important
         # Gaming 
-        background.draw(gui)
+        background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
         asset.draw(gui)
-        move_player(player)
 
         # Check collisions
         collision.vertical(player, objects)
         
+        player.draw(gui)
+
         # Update screen
         pygame.display.update()
 
