@@ -6,14 +6,14 @@ graphics:
   screen_reduction: 1.5
 
 background:
-  scale: 2 # int
+  scale: 1 # int
   path: ./art/background/
   folder: terrain/
   type: pink.png
   terrain: terrain.png
 
 character: 
-  scale: 2 # int
+  scale: 1 # int
   gravity: 1
   velocity: 5
   jump_limit: 2

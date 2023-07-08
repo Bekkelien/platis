@@ -2,7 +2,7 @@ import pygame
 import itertools
 
 from pathlib import Path
-
+from typing import List, Optional
 # Internals
 from src.config import Config
 from src.screen import ScreenResolution
@@ -203,9 +203,15 @@ class Collision():
     def __init__(self) -> None:
         pass
 
+    def horizontal(self, player, objects: list) -> Optional[list]:
+        # NOTE: Check non horizontal movement for performance
+        # TODO: Check for collision without pre moving the player
+        # Do left and right movement without two calls? and optimize the code
+        return
+    
     def vertical(self, player, objects: list):
         # NOTE: Check non vertical moving for performance
-        collision = []
+        collided_objects = []
         for object in objects:
             if pygame.sprite.collide_mask(player, object): # NOTE: Object need rect from Asset from pygame.sprite.Sprite collide_mask
                 if player.velocity_y > 0: # Moving down
@@ -215,15 +221,19 @@ class Collision():
                     player.rect.top = object.rect.bottom # move player to bottom
                     player.hit_head()
 
-            collision.append(object) # All objects that are colliding with the player
+            collided_objects.append(object) # All objects that the player is colliding with 
 
-        return collision # TODO :: Not used ATM
+        return collided_objects # TODO :: Not used ATM
     
+    def check(self, player, objects):
+        self.horizontal(player, objects)
+        self.vertical(player, objects) 
 
 
 class Asset():
     def __init__(self, block_size=48*config['background']['scale']):
         self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
+        # TODO:: 
         self.objects =  [Block(128, ScreenResolution.height - block_size*2, block_size),
                          Block(128*2, ScreenResolution.height - block_size*4, block_size),
                          Block(128*4, ScreenResolution.height - block_size*6, block_size)
@@ -245,7 +255,6 @@ class Movement():
         keys = pygame.key.get_pressed()
         player.loop() # Move the player every frame
         player.velocity_x = 0 # Reset velocity when not pressing a button
-
         if keys[pygame.K_LEFT]:
             player.move_left(config['character']['velocity'])
         if keys[pygame.K_RIGHT]:
@@ -292,9 +301,8 @@ def main(gui):
 
             # TODO add for "key down"
 
-        # Check for movement before doing anything else
         movement.move(player) 
-        collision.vertical(player, objects)
+        collision.check(player, objects)
         
         ## NOTE:: draw in every function creates order of operations to be important
         background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
