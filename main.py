@@ -74,15 +74,14 @@ class Background:
             gui.blit(self.image, tile)
 
 
-class Asset(pygame.sprite.Sprite):
+class Object(pygame.sprite.Sprite):
     """Base class for all assets"""
-    def __init__(self, x, y, width, height, name=None):
+    def __init__(self, x, y, width, height):
         super().__init__()
         self.rect = pygame.Rect(x, y, width, height)
         self.image = pygame.Surface((width, height), pygame.SRCALPHA)
         self.width = width
         self.height = height
-        self.name = name
 
     def draw(self, gui):
         gui.blit(self.image, (self.rect.x, self.rect.y))
@@ -96,7 +95,7 @@ def load_block(size): # TODO: Map all terrain blocks, add name to loading a bloc
     surface.blit(image, (0,0) ,rect)
     return surface
 
-class Block(Asset):
+class Block(Object):
     def __init__(self, x, y, size):
         super().__init__(x, y, size, size)
         block = load_block(size)
@@ -110,11 +109,11 @@ class Player(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, width, height)
         self.velocity_x = 0
         self.velocity_y = 0
-        self.fall_counter = 0
-        self.jump_counter = 0
+        self.fall_count = 0
+        self.jump_count = 0
         self.hit = False
-        self.animation_counter = 0
-        self.hit_counter = 0
+        self.animation_count = 0
+        self.hit_count = 0
         self.direction = "left"
         self.sprites = AssetSprite(config['character']['path'], config['character']['folder'], direction=True).load_sheets()
     
@@ -135,12 +134,21 @@ class Player(pygame.sprite.Sprite):
             self.animation_count = 0
 
     def gravity(self):
-        self.velocity_y += min(1, (self.fall_counter / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
-        self.fall_counter += 1
+        self.velocity_y += min(1, (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
+        self.fall_count += 1
         # missing gravity reset
 
+    def landed(self):
+        self.fall_count = 0
+        self.velocity_y = 0
+        self.jump_count = 0
+
+    def hit_head(self):
+        self.count = 0
+        self.velocity_y *= -1
+
     def loop(self):
-        #self.gravity() # Adding gravity to the player
+        self.gravity() # Adding gravity to the player
         self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
         self.update_sprite()
         self.update() # remove the background box from the character
@@ -152,14 +160,14 @@ class Player(pygame.sprite.Sprite):
 
         sprite_state = sprite_state + "_" + self.direction
         sprite_current = self.sprites[sprite_state]
-        sprite_index = (self.animation_counter // config['character']['animation_delay']) % len(sprite_current)
+        sprite_index = (self.animation_count // config['character']['animation_delay']) % len(sprite_current)
         self.current_sprite = sprite_current[sprite_index]
 
         animation_counter_limit = len(sprite_current*config['character']['animation_delay'])
-        if self.animation_counter < animation_counter_limit:
-            self.animation_counter += 1
+        if self.animation_count < animation_counter_limit:
+            self.animation_count += 1
         else:
-            self.animation_counter = 0 # Reset animation counter
+            self.animation_count = 0 # Reset animation counter
 
         #print(self.animation_counter)
         
@@ -173,6 +181,35 @@ class Player(pygame.sprite.Sprite):
         #pygame.draw.rect(gui, PLAYER_COLOR, self.rect)
         ##pygame.display.update()
 
+
+class Collision():
+    def __init__(self) -> None:
+        pass
+
+    def vertical(self, player, objects: list):
+        # NOTE: Check non vertical moving for performance
+        collision = []
+        for object in objects:
+            if pygame.sprite.collide_mask(player, object): # NOTE: Object need rect from Asset from pygame.sprite.Sprite collide_mask
+                if player.velocity_y > 0: # Moving down
+                    player.rect.bottom = object.rect.top # move player to top
+                    player.landed()
+                if player.velocity_y < 0: # Moving up
+                    player.rect.top = object.rect.bottom # move player to bottom
+                    player.hit_head()
+
+            collision.append(object) # All objects that are colliding with the player
+
+        return collision # TODO
+
+class Asset():
+    def __init__(self, block_size=48):
+        self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
+
+    def draw(self, gui):
+        for floor in self.floors:
+            floor.draw(gui)
+        
 # TODO: I dont like to have functions when everything is classes  
 def move_player(player):
     keys = pygame.key.get_pressed()
@@ -188,15 +225,6 @@ def move_player(player):
     player.draw(gui) # Cache the players new position
 
 
-class Floor():
-    def __init__(self, block_size=48):
-        self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
-
-    def draw(self, gui):
-        for floor in self.floors:
-            floor.draw(gui)
-        
-
 def main(gui):
     print(ScreenResolution.width)
     clock = pygame.time.Clock()
@@ -204,8 +232,11 @@ def main(gui):
     # Invoke
     background = Background()
     player = Player(50,50,50,50)
-    floor = Floor()
-    
+    asset = Asset()
+    collision = Collision()
+
+    objects = asset.floors
+
     # Preloading
     background.fill()
 
@@ -221,8 +252,11 @@ def main(gui):
         
         # Gaming 
         background.draw(gui)
-        floor.draw(gui)
+        asset.draw(gui)
         move_player(player)
+
+        # Check collisions
+        collision.vertical(player, objects)
         
         # Update screen
         pygame.display.update()
