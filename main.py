@@ -49,8 +49,6 @@ class AssetSprite():
         else:
             self.all_sprites[str(image_path.stem)] = sprites
 
-
-
     def load_sheets(self) -> dict: 
         """Loads the sprites sheets into a dictionary of sprites and returns the dictionary"""
         for image_path in self.image_paths:
@@ -73,41 +71,6 @@ class Background:
             gui.blit(self.image, tile)
 
 
-class Object(pygame.sprite.Sprite):
-    """Base class for all assets"""
-    def __init__(self, x, y, width, height):
-        super().__init__()
-        self.rect = pygame.Rect(x, y, width, height)
-        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
-        self.width = width
-        self.height = height
-
-    def draw(self, gui):
-        gui.blit(self.image, (self.rect.x, self.rect.y))
-
-
-# This should be in block class or something like that
-def load_block(size): # TODO: Map all terrain blocks, add name to loading a block
-    path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
-    image = pygame.image.load(path).convert_alpha()
-    surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
-    rect = pygame.Rect(96, 128, size, size)
-    surface.blit(image, (0,0) ,rect)
-
-    # Scaling
-    for _ in range(1, config['background']['scale']):
-        surface = pygame.transform.scale2x(surface)
-
-    return surface
-
-class Block(Object):
-    def __init__(self, x, y, size):
-        super().__init__(x, y, size, size)
-        block = load_block(size)
-        self.image.blit(block, (0, 0))
-        self.mask = pygame.mask.from_surface(self.image)
-
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
@@ -120,6 +83,7 @@ class Player(pygame.sprite.Sprite):
         self.animation_count = 0
         self.hit_count = 0
         self.direction = "left"
+        self.player_state = "fall"
         self.sprites = AssetSprite(config['character']['path'], config['character']['folder'], direction=True).load_sheets()
     
     def move(self):
@@ -139,7 +103,7 @@ class Player(pygame.sprite.Sprite):
             self.animation_count = 0
 
     def gravity(self):
-        self.current_velocity_y += min(1, (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
+        self.current_velocity_y += min(config['character']['gravity'], (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
         self.fall_count += 1
         # missing gravity reset
 
@@ -157,29 +121,30 @@ class Player(pygame.sprite.Sprite):
                 
     def hit_head(self):
         self.count = 0
-        self.current_velocity_y *= -1
+        self.current_velocity_y *= -1 # Change direction of the velocity if we hit the head
 
     def loop(self):
+        # print(self.player_state)
         self.gravity() # Adding gravity to the player
         self.move() # Move the player x,y direction
+        self.update_player_state()
         self.update_sprite()
         self.update() # remove the background box from the character
     
-    def update_sprite(self):
+    def update_player_state(self):
+        self.player_state = "idle"
         if self.current_velocity_y < 0:
             if self.jump_count == 1:
-                sprite_state = "jump"
+                self.player_state = "jump"
             elif self.jump_count == 2:
-                sprite_state = "double_jump"
-        elif self.current_velocity_y >= config['character']['gravity']: # NOTE: HAX We are falling if we are moving faster then gravity
-            sprite_state = "fall"
+                self.player_state = "double_jump"
+        elif self.current_velocity_y >= config['character']['gravity'] * 2: # NOTE: TODO: Better gravity solution HAX We are falling if we are moving 2x faster then gravity
+            self.player_state = "fall"
         elif self.current_velocity_x != 0: # elif as we are not running when jumping
-            sprite_state = "run"
-        else:
-            sprite_state = "idle"
-
-        #print(sprite_state)
-        sprite_state = sprite_state + "_" + self.direction
+            self.player_state = "run"
+            
+    def update_sprite(self):
+        sprite_state = self.player_state + "_" + self.direction
         sprite_current = self.sprites[sprite_state]
         sprite_index = (self.animation_count // config['character']['animation_delay']) % len(sprite_current)
         self.current_sprite = sprite_current[sprite_index]
@@ -204,17 +169,17 @@ class Collision():
     def __init__(self) -> None:
         pass
 
-    def horizontal(self, player, objects: list): # BUG we are colliding with the floor on objects due to gravity 
+    def horizontal(self, player, objects: list): # BUG we are colliding with the floor on objects due to gravity anybody's FUCKING GUESS
         # BUG sometimes we can jump on top of the item even if we are colliding horizontally and not jumping
         if player.current_velocity_x != 0:
             for object in objects:
                 if pygame.sprite.collide_mask(player, object): 
-                    player.rect.x = player.rect.x - player.current_velocity_x
+                    print("X collision")
+                    player.rect.x = player.rect.x - player.current_velocity_x 
                     return 
 
     def vertical(self, player, objects: list):
         # NOTE: Check non vertical moving for performance (since we almost always have gravity this doesn't matter FIXME)
-        collided_objects = []
         for object in objects:
             if pygame.sprite.collide_mask(player, object): # NOTE: Object need rect from Asset from pygame.sprite.Sprite collide_mask
                 if player.current_velocity_y > 0: # Moving down
@@ -224,18 +189,54 @@ class Collision():
                     player.rect.top = object.rect.bottom # move player to bottom
                     player.hit_head()
 
-                collided_objects.append(object) # All objects that the player is colliding with 
+    def check(self, player, objects: list):
+        self.horizontal(player, objects)
+        self.vertical(player, objects)
 
-        return collided_objects # TODO :: Not used ATM
-    
 
+class Object(pygame.sprite.Sprite):
+    """Base class for all assets"""
+    def __init__(self, x, y, width, height):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, width, height)
+        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+        self.width = width
+        self.height = height
+
+    def draw(self, gui):
+        gui.blit(self.image, (self.rect.x, self.rect.y))
+
+
+class Block(Object):
+    def __init__(self, x, y, size): # NOTE: Only support square size blocks ATM
+        super().__init__(x, y, size, size)
+        block = self._load_block(size) # NOTE: Back-loading the function how to do this cleaner and better
+        self.image.blit(block, (0, 0))
+        self.mask = pygame.mask.from_surface(self.image) 
+
+    # TODO Improvements TODO
+    def _load_block(self, size):
+        path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
+        image = pygame.image.load(path).convert_alpha()
+        surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
+        rect = pygame.Rect(96, 128, size, size)
+        surface.blit(image, (0,0) ,rect)
+
+        # Scaling
+        for _ in range(1, config['background']['scale']):
+            surface = pygame.transform.scale2x(surface)
+
+        return surface        
 class Asset():
     def __init__(self, block_size=48*config['background']['scale']):
         self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
         # TODO:: 
         self.objects =  [Block(128, ScreenResolution.height - block_size*2, block_size),
                          Block(128*2, ScreenResolution.height - block_size*4, block_size),
-                         Block(128*4, ScreenResolution.height - block_size*6, block_size)
+                         Block(128*4, ScreenResolution.height - block_size*6, block_size),
+                         Block(128*5, ScreenResolution.height - block_size*6, block_size),
+                         Block(128*7, ScreenResolution.height - block_size*6, block_size),
+                         Block(128*9, ScreenResolution.height - block_size*6, block_size),
                          ]
         
         self.assets = self.floors + self.objects
@@ -295,9 +296,10 @@ def main(gui):
                 movement.jump(player, event) 
 
         movement.move(player) 
-        collision.horizontal(player, asset.objects) # Cant collide with the floor vertically ATM 
-        collision.vertical(player, asset.assets)  # Assets are all objects
-        
+        #collision.horizontal(player, asset.objects) # Cant collide with the floor vertically ATM 
+        #collision.vertical(player, asset.assets)  # Assets are all objects
+        collision.check(player, asset.assets)
+
         ## NOTE:: draw in every function creates order of operations to be important
         background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
         asset.draw(gui)

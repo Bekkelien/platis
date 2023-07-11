@@ -3,7 +3,7 @@ game_settings:
   fps: 60
 
 graphics:
-  screen_reduction: 1.5
+  screen_reduction: 2
 
 background:
   scale: 1 # int
@@ -15,7 +15,7 @@ background:
 character: 
   scale: 1 # int
   gravity: 1
-  velocity: 5 # int
+  velocity: 7 # int
   jump_limit: 2
   jump_velocity: 10
   animation_delay: 3
