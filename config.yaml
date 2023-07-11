@@ -15,7 +15,7 @@ background:
 character: 
   scale: 1 # int
   gravity: 1
-  velocity: 5
+  velocity: 5 # int
   jump_limit: 2
   jump_velocity: 10
   animation_delay: 3

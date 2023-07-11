@@ -112,8 +112,9 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
         self.rect = pygame.Rect(x, y, width, height)
-        self.velocity_x = 0
-        self.velocity_y = 0
+        self.vertical_collision = False
+        self.current_velocity_x = 0
+        self.current_velocity_y: float = config['character']['gravity'] # Important to start with some gravity
         self.fall_count = 0
         self.jump_count = 0
         self.hit = False
@@ -122,29 +123,29 @@ class Player(pygame.sprite.Sprite):
         self.direction = "left"
         self.sprites = AssetSprite(config['character']['path'], config['character']['folder'], direction=True).load_sheets()
     
-    def move(self, dx, dy):
-        self.rect.x += dx
-        self.rect.y += dy
+    def move(self):
+        self.rect.x += self.current_velocity_x # Current x position of the player
+        self.rect.y += self.current_velocity_y # Current y position of the player
 
     def move_left(self, velocity):
-        self.velocity_x = -velocity
-        if self.direction != "left": # If direction is not left and the player is moving left change direction
+        self.current_velocity_x = -velocity
+        if self.direction != "left": # If direction is not left and the player is moving left we are moving left
             self.direction = "left"
             self.animation_count = 0
 
     def move_right(self, velocity):
-        self.velocity_x = velocity
-        if self.direction!= "right": # If direction is not right and the player is moving right change direction
+        self.current_velocity_x = velocity
+        if self.direction!= "right": # If direction is not right and the player is moving right we are moving left
             self.direction = "right"
             self.animation_count = 0
 
     def gravity(self):
-        self.velocity_y += min(1, (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
+        self.current_velocity_y += min(1, (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
         self.fall_count += 1
         # missing gravity reset
 
     def jump(self):
-        self.velocity_y = - (config['character']['gravity'] * config['character']['jump_velocity'])
+        self.current_velocity_y = - (config['character']['gravity'] * config['character']['jump_velocity'])
         self.animation_count = 0
         self.jump_count += 1
         if self.jump_count == 1:
@@ -152,32 +153,33 @@ class Player(pygame.sprite.Sprite):
 
     def landed(self):
         self.fall_count = 0
-        self.velocity_y = 0
+        self.current_velocity_y = 0
         self.jump_count = 0
                 
     def hit_head(self):
         self.count = 0
-        self.velocity_y *= -1
+        self.current_velocity_y *= -1
 
     def loop(self):
         self.gravity() # Adding gravity to the player
-        self.move(self.velocity_x, self.velocity_y) # Move the player x,y direction
+        self.move() # Move the player x,y direction
         self.update_sprite()
         self.update() # remove the background box from the character
     
     def update_sprite(self):
-        sprite_state = "idle" # Idle sprite state every time we update
-        if self.velocity_y < 0: # We are jumping
+        if self.current_velocity_y < 0:
             if self.jump_count == 1:
                 sprite_state = "jump"
             elif self.jump_count == 2:
                 sprite_state = "double_jump"
-        elif self.velocity_y > config['character']['gravity']: # NOTE: HAX We are falling if we are moving faster then gravity
+        elif self.current_velocity_y >= config['character']['gravity']: # NOTE: HAX We are falling if we are moving faster then gravity
             sprite_state = "fall"
-
-        elif self.velocity_x > 0: # elif as we are not running when jumping
+        elif self.current_velocity_x != 0: # elif as we are not running when jumping
             sprite_state = "run"
+        else:
+            sprite_state = "idle"
 
+        #print(sprite_state)
         sprite_state = sprite_state + "_" + self.direction
         sprite_current = self.sprites[sprite_state]
         sprite_index = (self.animation_count // config['character']['animation_delay']) % len(sprite_current)
@@ -203,25 +205,23 @@ class Collision():
     def __init__(self) -> None:
         pass
 
-    def horizontal(self, player, objects: list) -> Optional[list]:
-        # NOTE: Check non horizontal movement for performance
-        # TODO: Check for collision without pre moving the player
-        # Do left and right movement without two calls? and optimize the code
-        return
-    
+    def horizontal(self, player, objects: list): 
+        pass
+       # TODO
+
     def vertical(self, player, objects: list):
         # NOTE: Check non vertical moving for performance
         collided_objects = []
         for object in objects:
             if pygame.sprite.collide_mask(player, object): # NOTE: Object need rect from Asset from pygame.sprite.Sprite collide_mask
-                if player.velocity_y > 0: # Moving down
+                if player.current_velocity_y > 0: # Moving down
                     player.rect.bottom = object.rect.top # move player to top
                     player.landed()
-                if player.velocity_y < 0: # Moving up
+                if player.current_velocity_y < 0: # Moving up
                     player.rect.top = object.rect.bottom # move player to bottom
                     player.hit_head()
 
-            collided_objects.append(object) # All objects that the player is colliding with 
+                collided_objects.append(object) # All objects that the player is colliding with 
 
         return collided_objects # TODO :: Not used ATM
     
@@ -254,7 +254,7 @@ class Movement():
     def move(self, player):
         keys = pygame.key.get_pressed()
         player.loop() # Move the player every frame
-        player.velocity_x = 0 # Reset velocity when not pressing a button
+        player.current_velocity_x = 0 # Reset velocity when not pressing a button
         if keys[pygame.K_LEFT]:
             player.move_left(config['character']['velocity'])
         if keys[pygame.K_RIGHT]:
