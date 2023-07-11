@@ -196,15 +196,16 @@ class Collision():
         self.horizontal(player, objects)
         self.vertical(player, objects)
 
-
-class Points():
+# FIXME
+class GamePlay():
     def __init__(self):
-        pass
+        self.timer = time.time()
 
     def check(self, player, objects: list):
         for object in objects:
             if pygame.sprite.collide_mask(player, object): 
                 player.points += 1
+                self.timer = time.time()
                 objects.remove(object)
                 # TODO: MAP Safe places to add items on the screen
                 x = random.randint(32, ScreenResolution.width)
@@ -212,15 +213,25 @@ class Points():
                 print(ScreenResolution.height + y)
                 objects.append(Items(x, ScreenResolution.height - y, 32))
 
+        if time.time() - self.timer > 5:
+            print(f"Dead, you got: {player.points} points")
+            return True 
+        
+        return False 
+
 class Hud():
     def __init__(self):
         self.font = pygame.font.SysFont("ArialBold", int(60/config['graphics']['screen_reduction']))
 
-    def points(self, player, gui):
+    def _points(self, player):
         text_surface = self.font.render(f"Points: {player.points}", True, (255, 255, 255))
         text_rect = text_surface.get_rect()
         text_rect.topleft = (10, 10) 
 
+        return text_surface, text_rect
+
+    def draw(self, player, gui):
+        text_surface, text_rect = self._points(player)
         gui.blit(text_surface, text_rect)
 
 class Object(pygame.sprite.Sprite):
@@ -346,7 +357,7 @@ def main(gui):
     movement = Movement()
     asset = Asset()
     collision = Collision()
-    points = Points()
+    gameplay = GamePlay()
     hud = Hud()
 
     # Preloading
@@ -367,7 +378,12 @@ def main(gui):
 
         # Order of operations is important
         movement.move(player) 
-        points.check(player, asset.items)
+
+        # FIXME
+        game_over_hax = gameplay.check(player, asset.items)
+        if game_over_hax:
+            break
+
         collision.check(player, asset.assets)
 
         ## NOTE:: draw in every function creates order of operations to be important
@@ -375,7 +391,7 @@ def main(gui):
         asset.draw(gui)
         player.draw(gui)
 
-        hud.points(player, gui)
+        hud.draw(player, gui)
         # Update screen
         pygame.display.update()
 
