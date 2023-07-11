@@ -112,7 +112,6 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
         self.rect = pygame.Rect(x, y, width, height)
-        self.vertical_collision = False
         self.current_velocity_x = 0
         self.current_velocity_y: float = config['character']['gravity'] # Important to start with some gravity
         self.fall_count = 0
@@ -205,12 +204,16 @@ class Collision():
     def __init__(self) -> None:
         pass
 
-    def horizontal(self, player, objects: list): 
-        pass
-       # TODO
+    def horizontal(self, player, objects: list): # BUG we are colliding with the floor on objects due to gravity 
+        # BUG sometimes we can jump on top of the item even if we are colliding horizontally and not jumping
+        if player.current_velocity_x != 0:
+            for object in objects:
+                if pygame.sprite.collide_mask(player, object): 
+                    player.rect.x = player.rect.x - player.current_velocity_x
+                    return 
 
     def vertical(self, player, objects: list):
-        # NOTE: Check non vertical moving for performance
+        # NOTE: Check non vertical moving for performance (since we almost always have gravity this doesn't matter FIXME)
         collided_objects = []
         for object in objects:
             if pygame.sprite.collide_mask(player, object): # NOTE: Object need rect from Asset from pygame.sprite.Sprite collide_mask
@@ -225,10 +228,6 @@ class Collision():
 
         return collided_objects # TODO :: Not used ATM
     
-    def check(self, player, objects):
-        self.horizontal(player, objects)
-        self.vertical(player, objects) 
-
 
 class Asset():
     def __init__(self, block_size=48*config['background']['scale']):
@@ -279,12 +278,8 @@ def main(gui):
     asset = Asset()
     collision = Collision()
 
-    # All assets 
-    objects = asset.assets
-
     # Preloading
     background.fill()
-
     alive = True
     while alive:
         clock.tick(config['game_settings']['fps'])
@@ -299,10 +294,9 @@ def main(gui):
             if event.type == pygame.KEYDOWN:
                 movement.jump(player, event) 
 
-            # TODO add for "key down"
-
         movement.move(player) 
-        collision.check(player, objects)
+        collision.horizontal(player, asset.objects) # Cant collide with the floor vertically ATM 
+        collision.vertical(player, asset.assets)  # Assets are all objects
         
         ## NOTE:: draw in every function creates order of operations to be important
         background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
