@@ -1,5 +1,7 @@
 import pygame
 import itertools
+import random
+import time 
 
 from pathlib import Path
 from typing import List, Optional
@@ -77,6 +79,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, width, height)
         self.current_velocity_x = 0
         self.current_velocity_y: float = config['character']['gravity'] # Important to start with some gravity
+        self.points = 0
         self.fall_count = 0
         self.jump_count = 0
         self.hit = False
@@ -188,11 +191,37 @@ class Collision():
                 if player.current_velocity_y < 0: # Moving up
                     player.rect.top = object.rect.bottom # move player to bottom
                     player.hit_head()
-
+    
     def check(self, player, objects: list):
         self.horizontal(player, objects)
         self.vertical(player, objects)
 
+
+class Points():
+    def __init__(self):
+        pass
+
+    def check(self, player, objects: list):
+        for object in objects:
+            if pygame.sprite.collide_mask(player, object): 
+                player.points += 1
+                objects.remove(object)
+                # TODO: MAP Safe places to add items on the screen
+                x = random.randint(32, ScreenResolution.width)
+                y = random.randint(48*4, ScreenResolution.height/2)
+                print(ScreenResolution.height + y)
+                objects.append(Items(x, ScreenResolution.height - y, 32))
+
+class Hud():
+    def __init__(self):
+        self.font = pygame.font.SysFont("ArialBold", int(60/config['graphics']['screen_reduction']))
+
+    def points(self, player, gui):
+        text_surface = self.font.render(f"Points: {player.points}", True, (255, 255, 255))
+        text_rect = text_surface.get_rect()
+        text_rect.topleft = (10, 10) 
+
+        gui.blit(text_surface, text_rect)
 
 class Object(pygame.sprite.Sprite):
     """Base class for all assets"""
@@ -208,18 +237,24 @@ class Object(pygame.sprite.Sprite):
 
 
 class Block(Object):
-    def __init__(self, x, y, size): # NOTE: Only support square size blocks ATM
+    def __init__(self, x, y, size, color='pink'): # NOTE: Only support square size blocks ATM
         super().__init__(x, y, size, size)
-        block = self._load_block(size) # NOTE: Back-loading the function how to do this cleaner and better
+        block = self._load_block(size, color) # NOTE: Back-loading the function how to do this cleaner and better
         self.image.blit(block, (0, 0))
         self.mask = pygame.mask.from_surface(self.image) 
 
     # TODO Improvements TODO
-    def _load_block(self, size):
+    def _load_block(self, size,color):
         path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
         image = pygame.image.load(path).convert_alpha()
         surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
-        rect = pygame.Rect(96, 128, size, size)
+        if color == 'green':
+            color_placement = 0 # Green
+        if color == 'orange':
+            color_placement = 64 # Orange
+        if color == 'pink':
+            color_placement = 128 # Pink
+        rect = pygame.Rect(96, color_placement, size, size)  
         surface.blit(image, (0,0) ,rect)
 
         # Scaling
@@ -227,25 +262,58 @@ class Block(Object):
             surface = pygame.transform.scale2x(surface)
 
         return surface        
+
+
+# FIXME
+# JUST FOR TESTING
+# NOTE: Masking is implemented for every item this is bad ignoring for now making for this item TODO
+class Items(Object):
+    def __init__(self, x, y, size):
+        super().__init__(x, y, size, size)
+        block = self._load_kiwi(size) # NOTE: Back-loading the function how to do this cleaner and better
+        self.image.blit(block, (0, 0))
+        self.mask = pygame.mask.from_surface(self.image) 
+
+    # TODO Improvements TODO
+    def _load_kiwi(self, size):
+        path = Path(config['items']['path']) / Path("kiwi.png") # HARDCODING FIXME
+        image = pygame.image.load(path).convert_alpha()
+        surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
+        rect = pygame.Rect(0, 0, size, size)  # Loading static not the sprite NOTE:
+        surface.blit(image, (0,0) ,rect)
+
+        # Scaling
+        for _ in range(1, config['background']['scale']):
+            surface = pygame.transform.scale2x(surface)
+
+        return surface
+    
 class Asset():
-    def __init__(self, block_size=48*config['background']['scale']):
-        self.floors = [Block(i, ScreenResolution.height - block_size, block_size) for i in range(0, ScreenResolution.width, block_size)]
-        # TODO:: 
-        self.objects =  [Block(128, ScreenResolution.height - block_size*2, block_size),
-                         Block(128*2, ScreenResolution.height - block_size*4, block_size),
-                         Block(128*4, ScreenResolution.height - block_size*6, block_size),
-                         Block(128*5, ScreenResolution.height - block_size*6, block_size),
-                         Block(128*7, ScreenResolution.height - block_size*6, block_size),
-                         Block(128*9, ScreenResolution.height - block_size*6, block_size),
+    def __init__(self):
+        block_size_floor = 48 * config['background']['scale']
+
+        self.floors = [Block(i, ScreenResolution.height - block_size_floor, block_size_floor) for i in range(0, ScreenResolution.width, block_size_floor)]
+        self.objects =  [
+                         Block(128*2, ScreenResolution.height - block_size_floor*4, block_size_floor),
+                         Block(128*4, ScreenResolution.height - block_size_floor*4, block_size_floor),
+                         Block(128*5, ScreenResolution.height - block_size_floor*4, block_size_floor),
+                         Block(128*7, ScreenResolution.height - block_size_floor*4, block_size_floor),
+                         Block(128*9, ScreenResolution.height - block_size_floor*4, block_size_floor),
                          ]
         
         self.assets = self.floors + self.objects
 
+        self.items = [Items(128*2, ScreenResolution.height - 32*4, 32)]
+
+
     def draw(self, gui):
         for asset in self.assets:
             asset.draw(gui)
-        
-        
+
+        for asset in self.items:
+            asset.draw(gui)
+
+
 class Movement():
     # player changes so needs to be passed as a parameter every time
     def __init__(self) -> None:
@@ -278,6 +346,8 @@ def main(gui):
     movement = Movement()
     asset = Asset()
     collision = Collision()
+    points = Points()
+    hud = Hud()
 
     # Preloading
     background.fill()
@@ -295,9 +365,9 @@ def main(gui):
             if event.type == pygame.KEYDOWN:
                 movement.jump(player, event) 
 
+        # Order of operations is important
         movement.move(player) 
-        #collision.horizontal(player, asset.objects) # Cant collide with the floor vertically ATM 
-        #collision.vertical(player, asset.assets)  # Assets are all objects
+        points.check(player, asset.items)
         collision.check(player, asset.assets)
 
         ## NOTE:: draw in every function creates order of operations to be important
@@ -305,6 +375,7 @@ def main(gui):
         asset.draw(gui)
         player.draw(gui)
 
+        hud.points(player, gui)
         # Update screen
         pygame.display.update()
 

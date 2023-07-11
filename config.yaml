@@ -15,9 +15,12 @@ background:
 character: 
   scale: 1 # int
   gravity: 1
-  velocity: 7 # int
+  velocity: 4 # int
   jump_limit: 2
   jump_velocity: 10
   animation_delay: 3
   path: ./art/characters/ # TODO
   folder: pink_man/
+
+items:
+  path: ./art/items/
