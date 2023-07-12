@@ -1,8 +1,5 @@
 import pygame
-import itertools
-import random
 import time 
-import math
 
 from pathlib import Path
 from typing import List, Optional
@@ -10,7 +7,7 @@ from typing import List, Optional
 # Internals
 from src.config import Config
 from src.screen import ScreenResolution
-from src.world import Assets
+from src.world import Assets, Background
 from src.debug import GridDebug
 
 config = Config().get_config()
@@ -57,22 +54,6 @@ class AssetSprite:
         for image_path in self.image_paths:
             self._get_image(image_path)
         return self.all_sprites
-
-class Background:
-    def __init__(self):
-        self.image = pygame.image.load(Path(config['background']['path'])  / Path(config['background']['type']))
-        _, _, self.width, self.height = self.image.get_rect()
-
-    def fill(self):
-        # X and Y upper left corner coordinate for each tile in the background image to fill the screen
-        x = [i for i in range(0, ScreenResolution.width, self.width)]
-        y = [i for i in range(0, ScreenResolution.height, self.height)]
-        self.tiles = list(itertools.product(x, y))
-
-    def draw(self, gui):
-        for tile in self.tiles:
-            gui.blit(self.image, tile)
-
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
