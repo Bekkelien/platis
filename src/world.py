@@ -27,7 +27,7 @@ class Block(Object):
         self.mask = pygame.mask.from_surface(self.image) 
 
     # TODO Improvements TODO
-    def _load_block(self, size,color):
+    def _load_block(self, size, color):
         path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
         image = pygame.image.load(path).convert_alpha()
         surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
@@ -41,7 +41,6 @@ class Block(Object):
         surface.blit(image, (0,0) ,rect)
 
         return surface        
- 
 
 # FIXME
 # JUST FOR TESTING
@@ -63,26 +62,55 @@ class Items(Object):
 
         return surface
     
+
+
+# 1 Terrain, 9 Kiwi
+
+class Map():
+    def __init__(self):
+        self.world_matrix = [ [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+                              [0,0,0,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,9,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,9,0,0,0,0,0,0,0,0,0],
+                              [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                              [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]
+
+    def hax(self):
+        return self.world_matrix
+
+
+# TODO Map all asset types
+#class Assets(Map):
 class Assets():
     def __init__(self):
-        block_size_floor = 48
-
-        self.floors = [Block(i, ScreenResolution.height - block_size_floor, block_size_floor) for i in range(0, ScreenResolution.width, block_size_floor)]
-        self.objects =  [
-                         Block(128*2, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*4, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*5, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*7, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*9, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         ]
+        #super().__init__()
+        self.block_size = 48
+        self.terrain = []
+        self.items = []
         
-        self.assets = self.floors + self.objects
+        map = Map().hax()
+        # Slow implementation nested loops :) O(Dude)
+        for index, horizontal_line in enumerate(map):
+            y = self.block_size * index
+            for index, asset_type in enumerate(horizontal_line):
+                x = self.block_size * index
+                if asset_type == 1:
+                    self.terrain.append(Block(x,y,self.block_size))
 
-        self.items = [Items(128*2, ScreenResolution.height - 32*4, 32)]
-
+                elif asset_type == 9:
+                    self.items.append(Items(x,y,32))
 
     def draw(self, gui):
-        for asset in self.assets:
+        for asset in self.terrain:
             asset.draw(gui)
 
         for asset in self.items:

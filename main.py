@@ -216,11 +216,11 @@ class GamePlay():
                 #print(ScreenResolution.height + y)
                 #objects.append(Items(x, ScreenResolution.height - y, 32))
 
-        if time.time() - self.timer > 5:
-            print(f"Dead, you got: {player.points} points")
-            return True 
-        
-        return False 
+        #if time.time() - self.timer > 5:
+        #    print(f"Dead, you got: {player.points} points")
+        #    return True 
+        #
+        #return False 
 
 class Hud():
     def __init__(self):
@@ -245,7 +245,7 @@ class Movement():
     
     def move(self, player):
         keys = pygame.key.get_pressed()
-        player.loop() # Move the player every frame
+        player.loop() # Move the player every frame 
         player.current_velocity_x = 0 # Reset velocity when not pressing a button
         if keys[pygame.K_LEFT]:
             player.move_left(config['character']['velocity'])
@@ -295,10 +295,10 @@ def main(gui):
 
         # FIXME
         game_over_hax = gameplay.check(player, asset.items)
-        if game_over_hax:
-            break
+        #if game_over_hax:
+        #    break
 
-        collision.check(player, asset.assets)
+        collision.check(player, asset.terrain)
 
         ## NOTE:: draw in every function creates order of operations to be important
         background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy

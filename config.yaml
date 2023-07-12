@@ -8,7 +8,7 @@ game_settings:
 graphics:
   height: 720
   width: 1280
-  screen_reduction: 2
+  #screen_reduction: 2
 
 background:
   path: ./art/background/
