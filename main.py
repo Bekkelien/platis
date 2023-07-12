@@ -2,6 +2,7 @@ import pygame
 import itertools
 import random
 import time 
+import math
 
 from pathlib import Path
 from typing import List, Optional
@@ -15,7 +16,27 @@ config = Config().get_config()
 pygame.init()
 pygame.display.set_caption(config['game_settings']['name'])
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
- 
+
+
+# Used for testing map creation, setting grid
+class GridDebug:
+    def __init__(self):
+        self.block_size = 48
+        self.color = (255, 255, 255)
+
+    def _width(self, gui):
+        for line in range(1,math.ceil(ScreenResolution.width / self.block_size)):
+            pygame.draw.line(gui, self.color, (line*self.block_size, 0), (line*self.block_size, ScreenResolution.height)) # start: (x,y), stop (x,y)
+    
+    def _height(self, gui):
+        for line in range(1,math.ceil(ScreenResolution.height / self.block_size)):
+            pygame.draw.line(gui, self.color, (0, line*self.block_size), (ScreenResolution.width, line*self.block_size)) # start: (x,y), stop (x,y)
+        
+    def draw(self, gui):
+        self._width(gui)
+        self._height(gui)
+        
+
 class AssetSprite:
     def __init__(self, asset_path: str, asset_folder: str, direction: bool = False):
         self.direction: bool = direction
@@ -207,7 +228,7 @@ class GamePlay():
                 player.points += 1
                 self.timer = time.time()
                 objects.remove(object)
-                
+
                 # TODO: MAP Safe places to add items on the screen
                 x = random.randint(32, ScreenResolution.width)
                 y = random.randint(48*4, ScreenResolution.height/2)
@@ -222,7 +243,7 @@ class GamePlay():
 
 class Hud():
     def __init__(self):
-        self.font = pygame.font.SysFont("ArialBold", int(60/config['graphics']['screen_reduction']))
+        self.font = pygame.font.SysFont("ArialBold", 24)
 
     def _points(self, player):
         text_surface = self.font.render(f"Points: {player.points}", True, (255, 255, 255))
@@ -391,6 +412,9 @@ def main(gui):
         background.draw(gui) # This is a bit confusing naming convention / fill and draw the background a bit messy
         asset.draw(gui)
         player.draw(gui)
+
+        if config['debug']['grid']:
+            GridDebug().draw(gui)
 
         hud.draw(player, gui)
         # Update screen

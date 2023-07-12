@@ -1,8 +1,13 @@
+debug:
+  grid: True
+
 game_settings:
   name: Platis
   fps: 60
 
 graphics:
+  height: 720
+  width: 1280
   screen_reduction: 2
 
 background:
