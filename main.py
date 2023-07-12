@@ -16,7 +16,7 @@ pygame.init()
 pygame.display.set_caption(config['game_settings']['name'])
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
  
-class AssetSprite():
+class AssetSprite:
     def __init__(self, asset_path: str, asset_folder: str, direction: bool = False):
         self.direction: bool = direction
         self.all_sprites: dict = {}
@@ -35,14 +35,13 @@ class AssetSprite():
 
         sprites = []
         for i in range(image_blocks):
-            surface = pygame.Surface((32,32), pygame.SRCALPHA).convert_alpha() # TODO: #32
+            surface = pygame.Surface((height,height), pygame.SRCALPHA).convert_alpha() 
             surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
             if 'character' in str(image_path): # TODO :: Make generic if folder name is changed
                 for _ in range(1,config['character']['scale']):
                     surface = pygame.transform.scale2x(surface)
             sprites.append(surface)
 
-    
         # Add sprites to the dictionary
         if self.direction:
             self.all_sprites[str(image_path.stem) + "_right"] = sprites
@@ -77,17 +76,19 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
         self.rect = pygame.Rect(x, y, width, height)
-        self.current_velocity_x = 0
-        self.current_velocity_y: float = config['character']['gravity'] # Important to start with some gravity
-        self.points = 0
-        self.fall_count = 0
-        self.jump_count = 0
-        self.hit = False
-        self.animation_count = 0
-        self.hit_count = 0
-        self.direction = "left"
-        self.player_state = "fall"
         self.sprites = AssetSprite(config['character']['path'], config['character']['folder'], direction=True).load_sheets()
+
+        self.hit: bool = False
+        self.points: int = 0
+        self.fall_count:int = 0 # Used to increment gravity "speed"
+        self.jump_count:int = 0
+        self.hit_count: int = 0
+        self.current_velocity_x: int = 0 # NOTE: A bit messy to have float in y and int in x
+        self.current_velocity_y: float = config['character']['gravity'] # Important to start with some gravity
+        self.animation_count: int = 0
+
+        self.direction: str = "left" # NOTE: Easy to understand when string but not optimal
+        self.player_state: str = "fall"
     
     def move(self):
         self.rect.x += self.current_velocity_x # Current x position of the player
@@ -105,10 +106,9 @@ class Player(pygame.sprite.Sprite):
             self.direction = "right"
             self.animation_count = 0
 
-    def gravity(self):
-        self.current_velocity_y += min(config['character']['gravity'], (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) # Minimum gravity is 1 (NOTE: Should be pixel variable?)
+    def gravity(self): # NOTE: This is a bit of a hack but it works
+        self.current_velocity_y += min(config['character']['gravity'], (self.fall_count / config['game_settings']['fps']) * config['character']['gravity']) 
         self.fall_count += 1
-        # missing gravity reset
 
     def jump(self):
         self.current_velocity_y = - (config['character']['gravity'] * config['character']['jump_velocity'])
@@ -119,8 +119,8 @@ class Player(pygame.sprite.Sprite):
 
     def landed(self):
         self.fall_count = 0
-        self.current_velocity_y = 0
         self.jump_count = 0
+        self.current_velocity_y = 0
                 
     def hit_head(self):
         self.count = 0
@@ -207,6 +207,7 @@ class GamePlay():
                 player.points += 1
                 self.timer = time.time()
                 objects.remove(object)
+                
                 # TODO: MAP Safe places to add items on the screen
                 x = random.randint(32, ScreenResolution.width)
                 y = random.randint(48*4, ScreenResolution.height/2)
@@ -246,7 +247,6 @@ class Object(pygame.sprite.Sprite):
     def draw(self, gui):
         gui.blit(self.image, (self.rect.x, self.rect.y))
 
-
 class Block(Object):
     def __init__(self, x, y, size, color='pink'): # NOTE: Only support square size blocks ATM
         super().__init__(x, y, size, size)
@@ -273,7 +273,7 @@ class Block(Object):
             surface = pygame.transform.scale2x(surface)
 
         return surface        
-
+ 
 
 # FIXME
 # JUST FOR TESTING
@@ -362,7 +362,8 @@ def main(gui):
 
     # Preloading
     background.fill()
-    alive = True
+
+    alive = True # Not implemented
     while alive:
         clock.tick(config['game_settings']['fps'])
 
