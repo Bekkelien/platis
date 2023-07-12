@@ -1,5 +1,5 @@
 debug:
-  grid: True
+  grid: False
 
 game_settings:
   name: Platis
