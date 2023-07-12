@@ -6,9 +6,12 @@ import math
 
 from pathlib import Path
 from typing import List, Optional
+
 # Internals
 from src.config import Config
 from src.screen import ScreenResolution
+from src.world import Assets
+from src.debug import GridDebug
 
 config = Config().get_config()
 
@@ -17,25 +20,6 @@ pygame.init()
 pygame.display.set_caption(config['game_settings']['name'])
 gui = pygame.display.set_mode((ScreenResolution.width, ScreenResolution.height))
 
-
-# Used for testing map creation, setting grid
-class GridDebug:
-    def __init__(self):
-        self.block_size = 48
-        self.color = (255, 255, 255)
-
-    def _width(self, gui):
-        for line in range(1,math.ceil(ScreenResolution.width / self.block_size)):
-            pygame.draw.line(gui, self.color, (line*self.block_size, 0), (line*self.block_size, ScreenResolution.height)) # start: (x,y), stop (x,y)
-    
-    def _height(self, gui):
-        for line in range(1,math.ceil(ScreenResolution.height / self.block_size)):
-            pygame.draw.line(gui, self.color, (0, line*self.block_size), (ScreenResolution.width, line*self.block_size)) # start: (x,y), stop (x,y)
-        
-    def draw(self, gui):
-        self._width(gui)
-        self._height(gui)
-        
 
 class AssetSprite:
     def __init__(self, asset_path: str, asset_folder: str, direction: bool = False):
@@ -58,9 +42,6 @@ class AssetSprite:
         for i in range(image_blocks):
             surface = pygame.Surface((height,height), pygame.SRCALPHA).convert_alpha() 
             surface.blit(sprite_sheet_image, (0, 0), (height*i,0,height,height))
-            if 'character' in str(image_path): # TODO :: Make generic if folder name is changed
-                for _ in range(1,config['character']['scale']):
-                    surface = pygame.transform.scale2x(surface)
             sprites.append(surface)
 
         # Add sprites to the dictionary
@@ -230,10 +211,10 @@ class GamePlay():
                 objects.remove(object)
 
                 # TODO: MAP Safe places to add items on the screen
-                x = random.randint(32, ScreenResolution.width)
-                y = random.randint(48*4, ScreenResolution.height/2)
-                print(ScreenResolution.height + y)
-                objects.append(Items(x, ScreenResolution.height - y, 32))
+                #x = random.randint(32, ScreenResolution.width)
+                #y = random.randint(48*4, ScreenResolution.height/2)
+                #print(ScreenResolution.height + y)
+                #objects.append(Items(x, ScreenResolution.height - y, 32))
 
         if time.time() - self.timer > 5:
             print(f"Dead, you got: {player.points} points")
@@ -255,95 +236,6 @@ class Hud():
     def draw(self, player, gui):
         text_surface, text_rect = self._points(player)
         gui.blit(text_surface, text_rect)
-
-class Object(pygame.sprite.Sprite):
-    """Base class for all assets"""
-    def __init__(self, x, y, width, height):
-        super().__init__()
-        self.rect = pygame.Rect(x, y, width, height)
-        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
-        self.width = width
-        self.height = height
-
-    def draw(self, gui):
-        gui.blit(self.image, (self.rect.x, self.rect.y))
-
-class Block(Object):
-    def __init__(self, x, y, size, color='pink'): # NOTE: Only support square size blocks ATM
-        super().__init__(x, y, size, size)
-        block = self._load_block(size, color) # NOTE: Back-loading the function how to do this cleaner and better
-        self.image.blit(block, (0, 0))
-        self.mask = pygame.mask.from_surface(self.image) 
-
-    # TODO Improvements TODO
-    def _load_block(self, size,color):
-        path = Path(config['background']['path']) / Path(config['background']['folder']) / Path(config['background']['terrain'])
-        image = pygame.image.load(path).convert_alpha()
-        surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
-        if color == 'green':
-            color_placement = 0 # Green
-        if color == 'orange':
-            color_placement = 64 # Orange
-        if color == 'pink':
-            color_placement = 128 # Pink
-        rect = pygame.Rect(96, color_placement, size, size)  
-        surface.blit(image, (0,0) ,rect)
-
-        # Scaling
-        for _ in range(1, config['background']['scale']):
-            surface = pygame.transform.scale2x(surface)
-
-        return surface        
- 
-
-# FIXME
-# JUST FOR TESTING
-# NOTE: Masking is implemented for every item this is bad ignoring for now making for this item TODO
-class Items(Object):
-    def __init__(self, x, y, size):
-        super().__init__(x, y, size, size)
-        block = self._load_kiwi(size) # NOTE: Back-loading the function how to do this cleaner and better
-        self.image.blit(block, (0, 0))
-        self.mask = pygame.mask.from_surface(self.image) 
-
-    # TODO Improvements TODO
-    def _load_kiwi(self, size):
-        path = Path(config['items']['path']) / Path("kiwi.png") # HARDCODING FIXME
-        image = pygame.image.load(path).convert_alpha()
-        surface = pygame.Surface((size, size), pygame.SRCALPHA, 32)
-        rect = pygame.Rect(0, 0, size, size)  # Loading static not the sprite NOTE:
-        surface.blit(image, (0,0) ,rect)
-
-        # Scaling
-        for _ in range(1, config['background']['scale']):
-            surface = pygame.transform.scale2x(surface)
-
-        return surface
-    
-class Asset():
-    def __init__(self):
-        block_size_floor = 48 * config['background']['scale']
-
-        self.floors = [Block(i, ScreenResolution.height - block_size_floor, block_size_floor) for i in range(0, ScreenResolution.width, block_size_floor)]
-        self.objects =  [
-                         Block(128*2, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*4, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*5, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*7, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         Block(128*9, ScreenResolution.height - block_size_floor*4, block_size_floor),
-                         ]
-        
-        self.assets = self.floors + self.objects
-
-        self.items = [Items(128*2, ScreenResolution.height - 32*4, 32)]
-
-
-    def draw(self, gui):
-        for asset in self.assets:
-            asset.draw(gui)
-
-        for asset in self.items:
-            asset.draw(gui)
 
 
 class Movement():
@@ -376,7 +268,7 @@ def main(gui):
     background = Background()
     player = Player(50,50,50,50)
     movement = Movement()
-    asset = Asset()
+    asset = Assets()
     collision = Collision()
     gameplay = GamePlay()
     hud = Hud()

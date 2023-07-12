@@ -11,14 +11,12 @@ graphics:
   screen_reduction: 2
 
 background:
-  scale: 1 # int
   path: ./art/background/
   folder: terrain/
   type: pink.png
   terrain: terrain.png
 
 character: 
-  scale: 1 # int
   gravity: 1
   velocity: 4 # int
   jump_limit: 2
